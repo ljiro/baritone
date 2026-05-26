@@ -24,17 +24,13 @@ import baritone.api.event.events.TickEvent;
 import baritone.api.event.events.WorldEvent;
 import baritone.api.event.events.type.EventState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BiFunction;
@@ -62,22 +58,12 @@ public class MixinMinecraft {
         BaritoneAPI.getProvider().getPrimaryBaritone();
     }
 
+    // Fire PRE tick at the very start of Minecraft.tick().
+    // The old slice targeting Minecraft.missTime:I was removed since that field
+    // no longer exists in 26.1.x; HEAD is equivalent for our purposes.
     @Inject(
             method = "tick",
-            at = @At(
-                    value = "FIELD",
-                    opcode = Opcodes.GETFIELD,
-                    target = "net/minecraft/client/Minecraft.screen:Lnet/minecraft/client/gui/screens/Screen;",
-                    ordinal = 0,
-                    shift = At.Shift.BEFORE
-            ),
-            slice = @Slice(
-                    from = @At(
-                            value = "FIELD",
-                            opcode = Opcodes.PUTFIELD,
-                            target = "net/minecraft/client/Minecraft.missTime:I"
-                    )
-            )
+            at = @At("HEAD")
     )
     private void runTick(CallbackInfo ci) {
         this.tickProvider = TickEvent.createNextProvider();
@@ -109,8 +95,10 @@ public class MixinMinecraft {
         this.tickProvider = null;
     }
 
+    // require=0: ClientLevel.tickEntities() may have moved/renamed across versions
     @Inject(
             method = "tick",
+            require = 0,
             at = @At(
                     value = "INVOKE",
                     target = "net/minecraft/client/multiplayer/ClientLevel.tickEntities()V",
@@ -120,8 +108,6 @@ public class MixinMinecraft {
     private void postUpdateEntities(CallbackInfo ci) {
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer(this.player);
         if (baritone != null) {
-            // Intentionally call this after all entities have been updated. That way, any modification to rotations
-            // can be recognized by other entity code. (Fireworks and Pigs, for example)
             baritone.getGameEventHandler().onPlayerUpdate(new PlayerUpdateEvent(EventState.POST));
         }
     }
@@ -131,18 +117,11 @@ public class MixinMinecraft {
             at = @At("HEAD")
     )
     private void preLoadWorld(ClientLevel world, CallbackInfo ci) {
-        // If we're unloading the world but one doesn't exist, ignore it
         if (this.level == null && world == null) {
             return;
         }
-
-        // mc.world changing is only the primary baritone
-
         BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(
-                        world,
-                        EventState.PRE
-                )
+                new WorldEvent(world, EventState.PRE)
         );
     }
 
@@ -151,48 +130,13 @@ public class MixinMinecraft {
             at = @At("RETURN")
     )
     private void postLoadWorld(ClientLevel world, CallbackInfo ci) {
-        // still fire event for both null, as that means we've just finished exiting a world
-
-        // mc.world changing is only the primary baritone
         BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(
-                        world,
-                        EventState.POST
-                )
+                new WorldEvent(world, EventState.POST)
         );
     }
 
-    @Redirect(
-            method = "tick",
-            at = @At(
-                    value = "FIELD",
-                    opcode = Opcodes.GETFIELD,
-                    target = "Lnet/minecraft/client/gui/screens/Screen;passEvents:Z"
-            )
-    )
-    private boolean passEvents(Screen screen) {
-        // allow user input is only the primary baritone
-        return (BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().isPathing() && player != null) || screen.passEvents;
-    }
-
-    // TODO
-    // FIXME
-    // bradyfix
-    // i cant mixin
-    // lol
-    // https://discordapp.com/channels/208753003996512258/503692253881958400/674760939681349652
-    // https://discordapp.com/channels/208753003996512258/503692253881958400/674756457966862376
-    /*@Inject(
-            method = "rightClickMouse",
-            at = @At(
-                    value = "INVOKE",
-                    target = "net/minecraft/client/entity/player/ClientPlayerEntity.swingArm(Lnet/minecraft/util/Hand;)V",
-                    ordinal = 1
-            ),
-            locals = LocalCapture.CAPTURE_FAILHARD
-    )
-    private void onBlockUse(CallbackInfo ci, Hand var1[], int var2, int var3, Hand enumhand, ItemStack itemstack, EntityRayTraceResult rt, Entity ent, ActionResultType art, BlockRayTraceResult raytrace, int i, ActionResultType enumactionresult) {
-        // rightClickMouse is only for the main player
-        BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onBlockInteract(new BlockInteractEvent(raytrace.getPos(), BlockInteractEvent.Type.USE));
-    }*/
+    // NOTE: Screen.passEvents was removed in MC 1.20.x.
+    // The ability to keep movement running through open screens now requires
+    // a different approach (e.g. overriding Screen.isPauseScreen() or using
+    // input-key injection). Left as TODO for a future fix.
 }

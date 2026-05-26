@@ -19,27 +19,17 @@ import baritone.gradle.task.CreateDistTask
 import baritone.gradle.task.ProguardTask
 
 plugins {
-    id "com.github.johnrengelman.shadow" version "8.0.0"
+    id "com.github.johnrengelman.shadow" version "8.1.1"
 }
 
-archivesBaseName = archivesBaseName + "-forge"
+base.archivesName = base.archivesName.get() + "-neoforge"
 
 unimined.minecraft {
-    mappings {
-        devFallbackNamespace "intermediary"
-    }
-
-    forge {
-        loader project.forge_version
+    neoForge {
+        loader project.neoforge_version
         mixinConfig ["mixins.baritone.json"]
     }
 }
-
-//loom {
-//    forge {
-//        mixinConfig 'mixins.baritone.json'
-//    }
-//}
 
 configurations {
     common
@@ -62,7 +52,7 @@ dependencies {
 processResources {
     inputs.property "version", project.version
 
-    filesMatching("META-INF/mods.toml") {
+    filesMatching("META-INF/neoforge.mods.toml") {
         expand "version": project.version
     }
 }
@@ -100,24 +90,23 @@ components.java {
 
 task proguard(type: ProguardTask) {
     proguardVersion "7.2.1"
-    compType "forge"
+    compType "neoforge"
 }
 
 task createDist(type: CreateDistTask, dependsOn: proguard) {
-    compType "forge"
+    compType "neoforge"
 }
 
 build.finalizedBy(createDist)
 
 publishing {
     publications {
-        mavenFabric(MavenPublication) {
+        mavenNeoForge(MavenPublication) {
             artifactId = rootProject.archives_base_name + "-" + project.name
             from components.java
         }
     }
 
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
     repositories {
         // Add repositories to publish to here.
     }

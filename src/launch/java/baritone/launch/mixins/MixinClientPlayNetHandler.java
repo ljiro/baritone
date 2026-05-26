@@ -189,7 +189,7 @@ public class MixinClientPlayNetHandler {
             return;
         }
         baritone.getGameEventHandler().onBlockChange(new BlockChangeEvent(
-                new ChunkPos(changes.get(0).first()),
+                ChunkPos.containing(changes.get(0).first()),
                 changes
         ));
     }

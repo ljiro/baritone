@@ -15,8 +15,10 @@
  * along with Baritone.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package baritone.launch;import net.minecraftforge.fml.common.Mod;
+package baritone.launch;
 
-@Mod("baritoe")
+import net.neoforged.fml.common.Mod;
+
+@Mod("baritone")
 public class BaritoneForgeModXD {
 }

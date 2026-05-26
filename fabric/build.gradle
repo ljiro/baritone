@@ -19,14 +19,14 @@ import baritone.gradle.task.CreateDistTask
 import baritone.gradle.task.ProguardTask
 
 plugins {
-    id "com.github.johnrengelman.shadow" version "8.0.0"
+    id "com.github.johnrengelman.shadow" version "8.1.1"
 }
 
-archivesBaseName = archivesBaseName + "-fabric"
+base.archivesName = base.archivesName.get() + "-fabric"
 
 unimined.minecraft {
     fabric {
-        loader project.fabric_version
+        loader project.fabric_loader_version
     }
 }
 
@@ -46,6 +46,9 @@ dependencies {
         shadowCommon sourceSet.output
     }
     include "dev.babbaj:nether-pathfinder:${project.nether_pathfinder_version}"
+
+    // Fabric API for 26.1.2
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {
@@ -61,14 +64,14 @@ shadowJar {
     archiveClassifier.set "dev-shadow"
 }
 
-remapJar {
-    inputFile.set shadowJar.archiveFile
-    dependsOn shadowJar
-    archiveClassifier.set null
-}
-
+// In 26.1 the jar is already in official names — no remapping step needed.
+// The shadow jar is the final artifact.
 jar {
     archiveClassifier.set "dev"
+}
+
+tasks.named("build").configure {
+    dependsOn shadowJar
 }
 
 components.java {
@@ -96,7 +99,6 @@ publishing {
         }
     }
 
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
     repositories {
         // Add repositories to publish to here.
     }

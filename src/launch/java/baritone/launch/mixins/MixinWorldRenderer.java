@@ -22,6 +22,7 @@ import baritone.api.IBaritone;
 import baritone.api.event.events.RenderEvent;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
@@ -30,7 +31,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 /**
  * @author Brady
@@ -39,14 +39,25 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 @Mixin(LevelRenderer.class)
 public class MixinWorldRenderer {
 
+    // renderLevel signature changed in 1.21.x:
+    //   removed PoseStack, float partialTick, long finishNano
+    //   added DeltaTracker, split Matrix4f into projectionMatrix + viewMatrix
     @Inject(
             method = "renderLevel",
-            at = @At("RETURN"),
-            locals = LocalCapture.CAPTURE_FAILSOFT
+            at = @At("RETURN")
     )
-    private void onStartHand(PoseStack matrixStackIn, float partialTicks, long finishTimeNano, boolean drawBlockOutline, Camera activeRenderInfoIn, GameRenderer gameRendererIn, LightTexture lightmapIn, Matrix4f projectionIn, CallbackInfo ci) {
+    private void onRenderLevel(DeltaTracker deltaTracker, boolean drawBlockOutline, Camera camera,
+                                GameRenderer gameRenderer, LightTexture lightTexture,
+                                Matrix4f projectionMatrix, Matrix4f viewMatrix, CallbackInfo ci) {
+        float partialTicks = deltaTracker.getGameTimeDeltaPartialTick(false);
+
+        // Build a PoseStack from the view (model-view) matrix so downstream
+        // rendering code that expects a PoseStack continues to work.
+        PoseStack modelViewStack = new PoseStack();
+        modelViewStack.mulPoseMatrix(viewMatrix);
+
         for (IBaritone ibaritone : BaritoneAPI.getProvider().getAllBaritones()) {
-            ibaritone.getGameEventHandler().onRenderPass(new RenderEvent(partialTicks, matrixStackIn, projectionIn));
+            ibaritone.getGameEventHandler().onRenderPass(new RenderEvent(partialTicks, modelViewStack, projectionMatrix));
         }
     }
 }

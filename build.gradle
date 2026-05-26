@@ -20,7 +20,7 @@ allprojects {
     apply plugin: "xyz.wagyourtail.unimined"
     apply plugin: "maven-publish"
 
-    archivesBaseName = rootProject.archives_base_name
+    base.archivesName = rootProject.archives_base_name
 
     def vers = ""
     try {
@@ -38,7 +38,7 @@ allprojects {
     group = rootProject.maven_group
 
     sourceCompatibility = targetCompatibility = JavaVersion.toVersion(project.java_version)
-    
+
     java {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(sourceCompatibility.majorVersion.toInteger()))
@@ -59,8 +59,8 @@ allprojects {
             url = 'https://impactdevelopment.github.io/maven/'
         }
         maven {
-            name = "ldtteam"
-            url = "https://maven.parchmentmc.net/"
+            name = 'neoforged-maven'
+            url = 'https://maven.neoforged.net/releases'
         }
         // for the newer version of launchwrapper
         maven {
@@ -84,13 +84,13 @@ allprojects {
         implementation "dev.babbaj:nether-pathfinder:${project.nether_pathfinder_version}"
     }
 
+    // 26.1.2 is unobfuscated — the game jar already uses official (mojmap) names,
+    // so we only need mojmap() without intermediary or parchment layers.
     unimined.minecraft(sourceSets.main, true) {
         version rootProject.minecraft_version
 
         mappings {
-            intermediary()
             mojmap()
-            parchment("2023.06.26")
         }
     }
 
@@ -109,7 +109,7 @@ unimined.minecraft {
     defaultRemapJar = false
 }
 
-archivesBaseName = archivesBaseName + "-common"
+base.archivesName = base.archivesName.get() + "-common"
 
 sourceSets {
     api {

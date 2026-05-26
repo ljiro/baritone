@@ -1,0 +1,28 @@
+modLoader="neojavafml"
+loaderVersion="[26,)"
+license="https://raw.githubusercontent.com/cabaletta/baritone/master/LICENSE"
+issueTrackerURL="https://github.com/cabaletta/baritone/issues"
+
+[[mods]]
+modId="baritone"
+version="${version}"
+displayName="Baritone"
+displayURL="https://github.com/cabaletta/baritone"
+authors="leijurv, Brady"
+description='''
+A Minecraft pathfinder bot.
+'''
+
+[[dependencies.baritone]]
+modId="minecraft"
+type="required"
+versionRange="[26.1.2]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.baritone]]
+modId="neoforge"
+type="required"
+versionRange="[26.1.2.66-beta,)"
+ordering="NONE"
+side="BOTH"
