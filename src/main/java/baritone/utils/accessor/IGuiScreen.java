@@ -17,9 +17,6 @@
 
 package baritone.utils.accessor;
 
-import java.net.URI;
-
+// Screen.openLink was removed in 1.20.x; use Util.getPlatform().openUri() directly.
 public interface IGuiScreen {
-
-    void openLinkInvoker(URI url);
 }
